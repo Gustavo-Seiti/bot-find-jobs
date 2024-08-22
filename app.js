@@ -7,61 +7,53 @@ import { pesquisas } from './gupyQueries.js';
 (async () => {
   for (const chave in pesquisas) {
     if (pesquisas.hasOwnProperty(chave)) {
-      //  console.log(`Tipo de pesquisa: ${chave}`);
-        const urls = pesquisas[chave];
+      const urls = pesquisas[chave];
 
-        // Iterando sobre os arrays de URLs
-        for (let i = 0; i < urls.length; i++) {
-          try {
-            const url = urls[i];
-            //console.log(`URL ${i + 1}: ${url}`);
+      for (let i = 0; i < urls.length; i++) {
+        try {
+          const url = urls[i];
 
-            const resultJobsSearch = await findJobs(url); // ({ link:href, company:company });
+          const resultJobsSearch = await findJobs(url);
 
-            const subarrays = dividirArray(resultJobsSearch, 60);
+          const subarrays = dividirArray(resultJobsSearch, 60);
 
-            for(let arrayLinks in subarrays) {
+          for (let arrayLinks in subarrays) {
 
-              let jobsRequirements = await mustHaveRequirements(subarrays[arrayLinks]); // ENTRAR ARRAY DE LINKS
-              let geminiRequest = "";
-          
+            let jobsRequirements = await mustHaveRequirements(subarrays[arrayLinks]);
+
+            for (let i in jobsRequirements) {
+              const jobLink = jobsRequirements[i].link;
+              geminiRequest = geminiRequest.concat(`vaga_${[i]}` + " " + jobsRequirements[i].requisitos);
+              const startIndex = jobLink.indexOf("/job/") + 5;
+              const endIndex = jobLink.indexOf("?jobBoardSource=");
+              const extractedId = jobLink.substring(startIndex, endIndex);
+
+              jobsRequirements[i].id = extractedId;
+            }
+
+            const jsonRequisite = await runChat(geminiRequest);
+            await new Promise(resolve => setTimeout(resolve, 60000));
+            const regex = /```json([\s\S]+?)```/;
+            const match = jsonRequisite.match(regex);
+
+            if (match) {
+              const jsonStringContent = match[1].trim();
+              const jsonContent = JSON.parse(jsonStringContent)
+
               for (let i in jobsRequirements) {
-                const jobLink = jobsRequirements[i].link;
-                geminiRequest = geminiRequest.concat(`vaga_${[i]}` + " " + jobsRequirements[i].requisitos);
-                const startIndex = jobLink.indexOf("/job/") + 5;
-                const endIndex = jobLink.indexOf("?jobBoardSource=");
-                const extractedId = jobLink.substring(startIndex, endIndex);
-            
-                jobsRequirements[i].id = extractedId;
-              }
-              
-              const jsonRequisite = await runChat(geminiRequest);
-              await new Promise(resolve => setTimeout(resolve, 60000));
-              const regex = /```json([\s\S]+?)```/;
-              const match = jsonRequisite.match(regex);
-
-              if (match) {
-                const jsonStringContent = match[1].trim();
-                const jsonContent = JSON.parse(jsonStringContent)
-                //console.log(jsonContent); // aqui temos o objeto
-            
-                // console.log(jsonContent.vaga_1);
-            
-                for (let i in jobsRequirements) {
-                  const vaga = jsonContent[`vaga_${i}`]; // Obtém os requisitos da vaga correspondente
-                  if (vaga) {
-                    const arrayUnico = [].concat(...Object.values(vaga));
-                    const stringUnica = arrayUnico.join(', ');
-                    jobsRequirements[i].requisitos = stringUnica;
-                  }
+                const vaga = jsonContent[`vaga_${i}`];
+                if (vaga) {
+                  const arrayUnico = [].concat(...Object.values(vaga));
+                  const stringUnica = arrayUnico.join(', ');
+                  jobsRequirements[i].requisitos = stringUnica;
                 }
-               // console.log(jobsRequirements);
-            
-                const dadosParaInserir = returnJobObject(jobsRequirements, chave)
-                
-                for (let vaga in dadosParaInserir){
+              }
 
-                  Job.create(dadosParaInserir[vaga])
+              const dadosParaInserir = returnJobObject(jobsRequirements, chave)
+
+              for (let vaga in dadosParaInserir) {
+
+                Job.create(dadosParaInserir[vaga])
                   .then(resultados => {
                     console.log('Registros inseridos com sucesso:');
                   })
@@ -69,29 +61,28 @@ import { pesquisas } from './gupyQueries.js';
                     console.log('Erro ao inserir registros:', erro);
                   });
 
-                }
-
-
-                  await new Promise(resolve => setTimeout(resolve, 60000));
-            
-              } else {
-                console.log("Nenhuma correspondência encontrada.");
               }
-            
-            
+
+              await new Promise(resolve => setTimeout(resolve, 60000));
+
+            } else {
+              console.log("Nenhuma correspondência encontrada.");
             }
 
 
-           
-          
-
-          }catch (e) {
-
-            console.log("LOG: erro na execução da " + "  " + e.message)
           }
 
-            
+
+
+
+
+        } catch (e) {
+
+          console.log("LOG: erro na execução da " + "  " + e.message)
         }
+
+
+      }
     }
   }
 
@@ -200,15 +191,16 @@ async function mustHaveRequirements(jobsArray) {
 
           const texto = await mustHaveRequisites.evaluate(el => el.textContent.trim());
           jobsRequirements.push(
-            { 
-              link: jobsArray[i].link, 
-              requisitos: texto, company: 
-              jobsArray[i].company, 
-              local: jobsArray[i].local, 
-              title: jobsArray[i].title, 
-              modalidade: "", 
-              img: jobsArray[i].img, 
-              datePublished: datePublished})
+            {
+              link: jobsArray[i].link,
+              requisitos: texto, company:
+                jobsArray[i].company,
+              local: jobsArray[i].local,
+              title: jobsArray[i].title,
+              modalidade: "",
+              img: jobsArray[i].img,
+              datePublished: datePublished
+            })
 
         } else {
 
@@ -228,11 +220,11 @@ async function mustHaveRequirements(jobsArray) {
   return jobsRequirements;
 }
 
-function returnJobObject(arrayJobs, modalidade) { 
+function returnJobObject(arrayJobs, modalidade) {
   let vagasParaInserir = [];
   modalidade = modalidade.charAt(0).toUpperCase() + modalidade.slice(1);
 
-  for(let i in arrayJobs) {
+  for (let i in arrayJobs) {
     vagasParaInserir.push({
       id: arrayJobs[i].id,
       title: arrayJobs[i].title,
@@ -253,15 +245,15 @@ function returnJobObject(arrayJobs, modalidade) {
 
 function dividirArray(array, tamanhoMaximo) {
   if (array.length <= 80) {
-      return [array];
+    return [array];
   } else {
-      const numSubarrays = Math.ceil(array.length / tamanhoMaximo);
-      const subarrays = [];
-      for (let i = 0; i < numSubarrays; i++) {
-          const subarray = array.slice(i * tamanhoMaximo, (i + 1) * tamanhoMaximo);
-          subarrays.push(subarray);
-      }
-      return subarrays;
+    const numSubarrays = Math.ceil(array.length / tamanhoMaximo);
+    const subarrays = [];
+    for (let i = 0; i < numSubarrays; i++) {
+      const subarray = array.slice(i * tamanhoMaximo, (i + 1) * tamanhoMaximo);
+      subarrays.push(subarray);
+    }
+    return subarrays;
   }
 }
 
