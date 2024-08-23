@@ -14,7 +14,7 @@ Este é o projeto inicial do bot do Agreggatech, desenvolvido para ajudar desenv
 
 Para rodar o bot localmente, você precisará de:
 
-1. **Google AI Studio**: Um cadastro no [Google AI Studio](https://studio.google.com) e chaves de API válidas.
+1. **Google AI Studio**: Um cadastro no [Google AI Studio](https://ai.google.dev/aistudio) e chaves de API válidas.
 2. **Node.js**: Certifique-se de ter o Node.js instalado em sua máquina.
 3. **Dependências**: Execute o comando `npm install` para instalar as dependências necessárias.
 4. **SQLite**: Instale o [SQLite](https://www.sqlite.org/) para armazenar as informações das vagas.
@@ -24,7 +24,7 @@ Para rodar o bot localmente, você precisará de:
 1. Clone o repositório para o seu ambiente local:
 
     ```bash
-    git clone https://lnkd.in/dSbD8AuZ
+    git clone https://github.com/Gustavo-Seiti/bot-find-jobs.git
     ```
 
 2. Instale as dependências do projeto:
